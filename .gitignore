@@ -1,0 +1,6 @@
+# 图床密钥配置（含 AK/SK，绝不入库）
+scripts/image_bed_config.json
+
+# Python
+__pycache__/
+*.pyc
