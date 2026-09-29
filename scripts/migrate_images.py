@@ -59,6 +59,7 @@ class QiniuUploader(ImageBedUploader):
         ret, info = put_file(token, key, str(file_path))
         if info.status_code != 200:
             raise Exception(f"Upload failed: {info}")
+        # 注意：七牛 clouddn.com 测试域名的 https 证书错配（浏览器会拦截），只能用 http
         return f"http://{self.domain}/{key}"
 
     def matches(self, url):
