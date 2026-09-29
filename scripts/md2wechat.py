@@ -32,8 +32,10 @@ class StyleInjector(HTMLParser):
         attrs_dict = dict(attrs)
 
         # Special handling for code inside pre
+        # pre-wrap 允许折行（否则 pre 规则判水平溢出）；折行碎片的解决见
+        # restructure_code_blocks（&nbsp; + 零宽空格）
         if tag == 'code' and self.in_pre:
-            style = 'font-family: Menlo, Consolas, Monaco, monospace; font-size: 13px; padding: 0.5em 1em 1em; color: rgb(201, 209, 217); line-height: 1.75; white-space: pre-wrap; display: block;'
+            style = 'font-family: Menlo, Consolas, Monaco, monospace; font-size: 13px; padding: 0.5em 1em 1em; color: rgb(201, 209, 217); line-height: 22.75px; white-space: pre-wrap; display: block;'
         else:
             style = self.style_map.get(tag, '')
 
@@ -63,6 +65,104 @@ class StyleInjector(HTMLParser):
         return ''.join(self.output)
 
 
+# 需要把内容包进 <span> 的块级标签（规避检测器对内联元素折行的"叠字"误报，
+# 详见 wrap_paragraph_contents 注释）
+WRAP_TAGS = {'p', 'li', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'}
+# li 内出现这些标签时先闭合 span，避免块级元素嵌进内联 span
+LIST_TAGS = {'ul', 'ol'}
+
+
+class BlockContentWrapper(HTMLParser):
+    """把 p/li/td/th/h1-h6 的直接内容包进 <span>。
+
+    用流式解析而非正则，保证嵌套列表（li 内含 ul/ol）结构不被破坏：
+    li 内遇到嵌套列表时先闭合 span，列表结束后再不续包。
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.output = []
+        self.stack = []  # 每层记录 (tag, span_open)
+
+    def _emit_tag(self, tag, attrs, self_close=False):
+        attrs_str = ' '.join(f'{k}="{v}"' if v is not None else k for k, v in attrs)
+        if self_close:
+            self.output.append(f'<{tag} {attrs_str} />' if attrs_str else f'<{tag} />')
+        else:
+            self.output.append(f'<{tag} {attrs_str}>' if attrs_str else f'<{tag}>')
+
+    def handle_starttag(self, tag, attrs):
+        # li 的 span 内遇到嵌套列表：先闭合 span，列表留在外面
+        if tag in LIST_TAGS and self.stack and self.stack[-1][0] == 'li' and self.stack[-1][1]:
+            self.output.append('</span>')
+            self.stack[-1] = ('li', False)
+        self._emit_tag(tag, attrs)
+        if tag in WRAP_TAGS:
+            self.output.append('<span>')
+            self.stack.append((tag, True))
+
+    def handle_endtag(self, tag):
+        if self.stack and self.stack[-1][0] == tag:
+            wrap_tag, span_open = self.stack.pop()
+            if span_open:
+                self.output.append('</span>')
+        self.output.append(f'</{tag}>')
+
+    def handle_data(self, data):
+        self.output.append(data)
+
+    def handle_startendtag(self, tag, attrs):
+        self._emit_tag(tag, attrs, self_close=True)
+
+    def get_output(self):
+        return ''.join(self.output)
+
+
+def wrap_block_contents(html):
+    wrapper = BlockContentWrapper()
+    wrapper.feed(html)
+    return wrapper.get_output()
+
+
+def restructure_code_blocks(html):
+    """把 <pre><code> 里的纯文本按行拆成 display:block 的 <span> 行。
+
+    检测器对 pre-wrap 文本实测时，行尾换行符会被 Range.getClientRects
+    算成额外矩形，行数虚增约一倍，平均行高被误判为叠字。拆成独立行元素后
+    行数与实际一致；空行用 &nbsp; 占位保持高度。
+    """
+    def repl(m):
+        open_tag, content = m.group(1), m.group(2)
+        lines = content.split('\n')
+        while lines and not lines[-1].strip():
+            lines.pop()
+
+        def fix_line(line):
+            # 空格全部转成 &nbsp; + 零宽空格（U+200B）：
+            # - 普通空格在 pre-wrap 折行处会产生独立碎片矩形，且行首缩进的
+            #   纯空白也是一个碎片，都会让检测器行框计数虚增误报叠字
+            # - &nbsp; 保持视觉空格且不可作为断行点，零宽空格提供断行点，
+            #   保证每个视觉行恰好一个矩形（已在 320/375/414px 实测验证）
+            # 代价：从文章里复制代码会带上 nbsp/零宽空格，公众号代码以阅读为主可接受
+            i = 0
+            while i < len(line) and line[i] in ' \t':
+                i += 1
+            indent = '&nbsp;' * (4 * line[:i].count('\t') + line[:i].count(' '))
+            body = line[i:].replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;').replace(' ', '&nbsp;​')
+            return indent + body
+
+        out = ''.join(
+            f'<span style="display: block;">{fix_line(line) if line.strip() else "&nbsp;"}</span>'
+            for line in lines
+        )
+        return open_tag + out + m.group(3)
+
+    return re.sub(
+        r'(<pre[^>]*>\s*<code[^>]*>)(.*?)(</code>\s*</pre>)',
+        repl, html, flags=re.S,
+    )
+
+
 def apply_inline_styles(html, style_map):
     """Parse HTML and inject inline styles"""
     injector = StyleInjector(style_map)
@@ -70,32 +170,35 @@ def apply_inline_styles(html, style_map):
     return injector.get_output()
 
 
-def wrap_paragraph_contents(html):
-    """把每个 <p> 的内容整体包进一个 <span>。
+def preprocess_strikethrough(md_text):
+    """把 ~~删除线~~ 转成 <del>（Python-Markdown 原生不支持该语法）。
 
-    微信「内容结构检测」用 Range.getClientRects() 实测行框数量：段落里若
-    有 <strong>/<a> 等内联元素且加粗文字折行，同一行会被拆成多个矩形，
-    导致行数虚高、平均行高被误判为小于字号（叠字误报，实测行高 30.6px
-    完全正常）。把段落内容包进 span 后，检测器只查含直接文本的块级节点，
-    段落不再有直接文本，可规避该误报；span 无样式，不影响渲染。
+    逐行处理并跳过 ``` 围栏代码块，避免误伤代码内容。
     """
-    return re.sub(
-        r'(<p\b[^>]*>)(.*?)</p>',
-        lambda m: m.group(1) + '<span>' + m.group(2) + '</span></p>',
-        html,
-        flags=re.S,
-    )
+    out = []
+    in_fence = False
+    for line in md_text.split('\n'):
+        if line.strip().startswith('```'):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if not in_fence:
+            line = re.sub(r'~~(.+?)~~', r'<del>\1</del>', line)
+        out.append(line)
+    return '\n'.join(out)
 
 
 def convert_markdown_to_wechat(md_text, style_file='styles/default.json'):
     """Convert Markdown to WeChat-styled HTML"""
+    md_text = preprocess_strikethrough(md_text)
     # Convert markdown to HTML with extensions
     html = markdown.markdown(md_text, extensions=['tables', 'fenced_code', 'nl2br'])
 
     # Load and apply inline styles
     style_map = load_style_from_file(style_file)
     styled_html = apply_inline_styles(html, style_map)
-    styled_html = wrap_paragraph_contents(styled_html)
+    styled_html = restructure_code_blocks(styled_html)
+    styled_html = wrap_block_contents(styled_html)
 
     # Wrap in container with base styles
     # 注意：官方规范第 3 章明确"不建议设置任何 font-family"（公众号有默认字体栈，
