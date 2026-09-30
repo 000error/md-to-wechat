@@ -223,7 +223,7 @@ def convert_markdown_to_wechat(md_text, style_file='styles/default.json'):
     # Wrap in container with base styles
     # 注意：官方规范第 3 章明确"不建议设置任何 font-family"（公众号有默认字体栈，
     # 自定义字体族会导致 iOS 上字号/字间距渲染不一致），故容器不设 font-family。
-    container_style = f'font-size: 15px; color: rgb(63, 63, 63); line-height: 26.25px; letter-spacing: 2px; text-align: left;'
+    container_style = f'font-size: 15px; color: rgb(63, 63, 63); line-height: 30px; letter-spacing: 2px; text-align: left;'
 
     return f'<div style="{container_style}">\n{styled_html}\n</div>'
 
