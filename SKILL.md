@@ -16,13 +16,15 @@ description: "Markdown 转微信公众号 HTML 工具。用户给出 Markdown �
 
 ## 工作流程
 
-### 第一步：通过对话获取图床配置（每次运行必做）
+### 第一步：图床配置（有已保存配置就跳过，别问用户）
 
-**每次运行都必须先向用户索取图床信息**，不要依赖配置文件中的已有内容：
+**先读 `scripts/image_bed_config.json`：配置完整（provider + 密钥 + bucket + domain）就直接使用，整个流程无需任何对话确认，一口气跑完迁移、转换、合规校验并交付。**
+
+仅当配置缺失或不完整时才询问用户：
 
 - 询问使用哪个图床（目前脚本支持七牛云 qiniu）
-- 七牛云需要用户提供 4 项：`access_key`、`secret_key`、`bucket`、`domain`（CDN 域名，不含 http:// 前缀）
-- 用户提供后，用 Write/Edit 工具将信息写入 `scripts/image_bed_config.json`（供脚本读取），然后进入第二步
+- 七牛云需要 4 项：`access_key`、`secret_key`、`bucket`、`domain`（CDN 域名，不含 http:// 前缀）
+- 用户提供后，用 Write/Edit 工具写入 `scripts/image_bed_config.json`（供脚本读取，之后永久免问），然后进入第二步
 - 用户无法提供时，告知无法完成图床迁移，询问是否跳过迁移直接转换（见第三步）
 
 ### 第二步：迁移图片到图床
