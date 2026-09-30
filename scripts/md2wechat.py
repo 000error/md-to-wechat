@@ -197,7 +197,8 @@ def adjust_image_paragraphs(html):
     1.4.2 溢出规则。
     """
     def repl(m):
-        style = m.group(1).replace('margin: 0px 8px 1.4em', 'margin: 0px 0px 1.4em')
+        # margin: 0px 8px <段距> → margin: 0px 0px <段距>（段距值随样式主题变化，用正则通配）
+        style = re.sub(r'margin: 0px 8px ([^;]+);', r'margin: 0px 0px \1;', m.group(1))
         return f'<p style="{style}"><span>{m.group(2)}</span></p>'
 
     return re.sub(
@@ -222,7 +223,7 @@ def convert_markdown_to_wechat(md_text, style_file='styles/default.json'):
     # Wrap in container with base styles
     # 注意：官方规范第 3 章明确"不建议设置任何 font-family"（公众号有默认字体栈，
     # 自定义字体族会导致 iOS 上字号/字间距渲染不一致），故容器不设 font-family。
-    container_style = f'font-size: 16px; color: rgb(63, 63, 63); line-height: 28px; letter-spacing: 2px; text-align: left;'
+    container_style = f'font-size: 15px; color: rgb(63, 63, 63); line-height: 26.25px; letter-spacing: 2px; text-align: left;'
 
     return f'<div style="{container_style}">\n{styled_html}\n</div>'
 
