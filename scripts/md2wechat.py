@@ -25,10 +25,13 @@ class StyleInjector(HTMLParser):
         self.style_map = style_map
         self.output = []
         self.in_pre = False
+        self.in_blockquote = False
 
     def handle_starttag(self, tag, attrs):
         if tag == 'pre':
             self.in_pre = True
+        if tag == 'blockquote':
+            self.in_blockquote = True
 
         attrs_dict = dict(attrs)
 
@@ -37,6 +40,10 @@ class StyleInjector(HTMLParser):
         # restructure_code_blocks（&nbsp; + 零宽空格）
         if tag == 'code' and self.in_pre:
             style = 'font-family: Menlo, Consolas, Monaco, monospace; font-size: 13px; padding: 0.5em 1em 1em; color: rgb(201, 209, 217); line-height: 22.75px; white-space: pre-wrap; display: block;'
+        # 引用块内的段落用专用样式（灰字、左对齐、无装饰，长 URL 不会被
+        # 两端对齐拉散），blockquote_p 缺省时退回普通段落样式
+        elif tag == 'p' and self.in_blockquote:
+            style = self.style_map.get('blockquote_p') or self.style_map.get(tag, '')
         else:
             style = self.style_map.get(tag, '')
 
@@ -49,6 +56,8 @@ class StyleInjector(HTMLParser):
     def handle_endtag(self, tag):
         if tag == 'pre':
             self.in_pre = False
+        if tag == 'blockquote':
+            self.in_blockquote = False
         self.output.append(f'</{tag}>')
 
     def handle_data(self, data):

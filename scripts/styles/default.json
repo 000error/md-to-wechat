@@ -10,7 +10,7 @@
   "img": "width: 100%; height: auto; display: block; margin: 1.2em auto;",
   "code": "font-family: Menlo, Consolas, Monaco, monospace; font-size: 15px; background-color: rgba(27, 31, 35, 0.05); padding: 0.2em 0.4em; border-radius: 3px; color: rgb(215, 58, 73);",
   "pre": "text-align: left; margin: 0px 8px 10px; background: rgb(13, 17, 23); border-radius: 8px; padding: 0px; font-size: 15px; overflow-x: auto;",
-  "blockquote": "text-align: justify; margin: 1em 8px; padding: 0.8em 1em; border-left: 4px solid rgb(220, 220, 220); background-color: rgba(0, 0, 0, 0.03); color: rgb(99, 99, 99);",
+  "blockquote": "margin: 0px 0px 26px; padding: 0px;",
   "ul": "text-align: left; margin: 0.6em 8px; padding-left: 1.5em; list-style-type: disc;",
   "ol": "text-align: left; margin: 0.6em 8px; padding-left: 1.5em; list-style-type: decimal;",
   "li": "text-align: justify; margin: 0.3em 0; color: rgb(63, 63, 63); font-size: 15px; letter-spacing: 2px; line-height: 30px;",
@@ -20,5 +20,6 @@
   "hr": "border-style: solid; border-width: 1px 0 0; border-color: rgba(0, 0, 0, 0.1); margin: 1em 0;",
   "strong": "font-weight: bold;",
   "em": "font-style: italic;",
-  "del": "text-decoration: line-through; opacity: 0.7;"
+  "del": "text-decoration: line-through; opacity: 0.7;",
+  "blockquote_p": "text-align: left; margin: 0px 8px 13px; padding: 0px; color: rgb(127, 127, 127); font-size: 15px; letter-spacing: 2px; line-height: 30px;"
 }
