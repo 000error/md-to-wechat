@@ -1,6 +1,6 @@
 ---
 name: "md-to-wechat"
-description: "Markdown 转微信公众号 HTML 工具。用户给出 Markdown 文件后，先通过对话获取用户的图床配置，再检测文中图片是否已托管在该图床上，不在图床上的图片（外链或本地图片）自动迁移到图床，最后转换为带内联样式的微信公众号 HTML。触发词：转微信、转公众号、md转html、发布到公众号。"
+description: "Markdown 转微信公众号 HTML 工具。用户给出 Markdown 文件路径即可全自动完成：图片迁移图床（配置已保存，无需询问）→ 转换带内联样式的公众号 HTML → 微信官方检测器自动合规校验。输出预览+粘贴双用途 HTML。触发词：转微信、转公众号、md转html、发布到公众号、排版。"
 ---
 
 # Markdown 转微信公众号 HTML
