@@ -4,3 +4,6 @@ scripts/image_bed_config.json
 # Python
 __pycache__/
 *.pyc
+
+# 官方检测器本地副本（含 node_modules，体量大不入库，部署方法见 SKILL.md）
+wechat-checker/

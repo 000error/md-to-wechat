@@ -67,7 +67,32 @@ python md2wechat.py <上一步输出的md文件> --output <输出html路径>
 
 **Markdown 源文件排版约定（配套）**：文章中的「功能 / 工作机制 / 作者介绍」等栏目标签统一使用 `####` 四级标题（不用加粗正文或列表项），标题独占一行、内容另起一行，保证转换后层级一致。
 
-### 第四步：交付
+### 第四步：合规验证（自动，务必保留）
+
+`md2wechat.py` 转换完成后会**自动调用微信官方检测器**（`wechat-checker/`，即官方开源的 verify-article-structure-spec 本地副本）对输出 HTML 跑全规则校验：
+
+- 验证前会先剥离 `<style>` 预览样式块（`strip_preview_chrome`），检测结果等于微信粘贴后的实际内容
+- 输出 `[检测通过]` 才算完成；输出 `[检测未通过]` 时转换以退出码 1 结束，**必须根据违规节点修复样式后重新转换**
+- 可用 `--no-verify` 跳过（仅调试时用）
+- 单独校验已有 HTML：`python verify_wechat.py <html文件>`
+
+**硬性规则：每次修改 `styles/default.json` 或 `md2wechat.py` 的格式相关代码后，必须跑一次全格式回归**：
+
+```bash
+python md2wechat.py tests/full_format_fixture.md --output /tmp/regression.html
+```
+
+`tests/full_format_fixture.md` 覆盖了标题/长段落/加粗折行/列表/代码块/表格/图片/引用等全部格式，能触发历史上所有误报场景。检测通过才可交付。
+
+**检测器首次部署**（skill 克隆到新机器后）：
+
+```bash
+cd wechat-checker
+git clone https://github.com/wechatjs/verify-article-structure-spec.git .
+cd cli && PUPPETEER_SKIP_DOWNLOAD=true npm install   # 跳过 Chromium 下载，用系统 Chrome
+```
+
+### 第五步：交付
 
 向用户报告生成的文件路径，并提示：
 > 用浏览器打开 HTML 文件，全选复制（Ctrl+A, Ctrl+C），粘贴到微信公众号编辑器即可。

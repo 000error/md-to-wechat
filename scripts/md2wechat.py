@@ -5,6 +5,7 @@ import argparse
 import markdown
 import json
 import re
+import sys
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -284,6 +285,8 @@ def main():
     parser.add_argument('input', help='Input Markdown file path')
     parser.add_argument('--style', default='styles/default.json', help='Style file (default: styles/default.json)')
     parser.add_argument('--output', help='Output HTML file path (default: current directory)')
+    parser.add_argument('--no-verify', action='store_true',
+                        help='跳过官方检测器合规校验（默认转换后自动校验）')
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -311,7 +314,28 @@ def main():
     preview_html = create_preview_html(styled_content)
     output_file.write_text(preview_html, encoding='utf-8')
     print(f"[OK] Generated: {output_file}")
-    print(f"[提示] 用浏览器打开该文件，全选复制(Ctrl+A, Ctrl+C)，然后粘贴到微信公众号编辑器")
+    print(f"[提示] 用浏览器打开该文件可预览手机端效果；全选复制(Ctrl+A, Ctrl+C)粘贴到微信公众号编辑器")
+
+    # 默认自动跑微信官方检测器校验（可用 --no-verify 跳过）
+    if not args.no_verify:
+        try:
+            from verify_wechat import verify
+            print(f"[检测] 正在调用微信官方检测器校验……")
+            ok, output = verify(output_file)
+            if ok is None:
+                print(f"[检测跳过] {output}")
+            elif ok:
+                print(f"[检测通过] 官方检测器全规则 0 违规")
+            else:
+                lines = [l for l in output.splitlines()
+                         if l.strip() and 'uppeteer' not in l and 'headless' not in l]
+                # GBK 控制台无法显示 ✗ 等符号，替换后打印
+                detail = '\n'.join(lines[-30:])
+                print(detail.encode('gbk', errors='replace').decode('gbk', errors='replace'))
+                print(f"[检测未通过] 存在违规项，请修复后重新转换")
+                sys.exit(1)
+        except Exception as e:
+            print(f"[检测异常] {e}（不影响已生成的 HTML，可用 verify_wechat.py 单独排查）")
 
 
 if __name__ == '__main__':
