@@ -188,6 +188,24 @@ def preprocess_strikethrough(md_text):
     return '\n'.join(out)
 
 
+def adjust_image_paragraphs(html):
+    """只含一张图片的段落去掉左右边距，让图片通栏（等效微信"自适应"）。
+
+    正文段落左右各有 8px 边距，img 的 width:100% 只是段内宽度的 100%，
+    会比正文区窄 16px；图片段落边距归零后图片与正文区同宽。
+    不用 calc(100%+16px)/负边距方案——会产生水平偏移，触发检测器
+    1.4.2 溢出规则。
+    """
+    def repl(m):
+        style = m.group(1).replace('margin: 0px 8px 1.4em', 'margin: 0px 0px 1.4em')
+        return f'<p style="{style}"><span>{m.group(2)}</span></p>'
+
+    return re.sub(
+        r'<p style="([^"]*)">\s*(?:<span>)?\s*((?:<img[^>]*/>))\s*(?:</span>)?\s*</p>',
+        repl, html, flags=re.S,
+    )
+
+
 def convert_markdown_to_wechat(md_text, style_file='styles/default.json'):
     """Convert Markdown to WeChat-styled HTML"""
     md_text = preprocess_strikethrough(md_text)
@@ -199,6 +217,7 @@ def convert_markdown_to_wechat(md_text, style_file='styles/default.json'):
     styled_html = apply_inline_styles(html, style_map)
     styled_html = restructure_code_blocks(styled_html)
     styled_html = wrap_block_contents(styled_html)
+    styled_html = adjust_image_paragraphs(styled_html)
 
     # Wrap in container with base styles
     # 注意：官方规范第 3 章明确"不建议设置任何 font-family"（公众号有默认字体栈，
