@@ -7,7 +7,7 @@
   "h6": "text-align: left; font-size: 16px; font-weight: bold; color: rgb(63, 63, 63); margin: 0.8em 8px 0.4em; line-height: 24.0px;",
   "p": "text-align: justify; margin: 0px 8px 1.4em; padding: 0px; color: rgb(63, 63, 63); font-size: 17px; letter-spacing: 0.5px; line-height: 30.6px;",
   "a": "color: rgb(0, 128, 255); text-decoration: underline; font-weight: bold;",
-  "img": "width: 78%; height: auto; border-radius: 6px; box-shadow: rgb(200, 200, 200) 0px 0px 0.4em 0px; display: block; margin: 1.2em auto; object-fit: contain;",
+  "img": "width: 100%; height: auto; border-radius: 6px; display: block; margin: 1.2em auto;",
   "code": "font-family: Menlo, Consolas, Monaco, monospace; font-size: 15px; background-color: rgba(27, 31, 35, 0.05); padding: 0.2em 0.4em; border-radius: 3px; color: rgb(215, 58, 73);",
   "pre": "text-align: left; margin: 0px 8px 10px; background: rgb(13, 17, 23); border-radius: 8px; padding: 0px; font-size: 15px; overflow-x: auto;",
   "blockquote": "text-align: justify; margin: 1em 8px; padding: 0.8em 1em; border-left: 4px solid rgb(220, 220, 220); background-color: rgba(0, 0, 0, 0.03); color: rgb(99, 99, 99);",
