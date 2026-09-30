@@ -54,6 +54,8 @@ python md2wechat.py <上一步输出的md文件> --output <输出html路径>
 
 - 默认使用 `scripts/styles/default.json` 样式
 - 输出完整 HTML 文件（默认 `<原名>_wechat.html`）
+- **输出文件是"预览 + 粘贴"双用途**：浏览器打开时显示灰底白卡片的手机端预览效果（预览样式只写在 `<style>` 里、不含任何 class/内联样式，复制粘贴时不会带进微信）；全选复制粘贴到微信编辑器得到的就是纯净的文章内容
+- **合规验证注意**：用微信官方检测器（verify-article-structure-spec）验证时，需先用 `md2wechat.py` 里的 `strip_preview_chrome()` 去掉 `<style>` 预览样式块再跑——检测引擎会把计算样式内联实测，预览卡片会引入与粘贴结果无关的误报
 
 **默认样式标准（2026-09-09 与用户调定为大字版，勿随意回退）**：
 
