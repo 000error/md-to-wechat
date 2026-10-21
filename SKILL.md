@@ -125,7 +125,8 @@ pip install -r scripts/requirements.txt   # markdown, qiniu
 3. **图床扩展**：当前仅实现七牛云。用户要求其它图床（阿里云 OSS、腾讯云 COS）时，告知需要扩展 `migrate_images.py` 中的 uploader 类，可按 QiniuUploader 的模式协助添加
 4. **失败的图片**：迁移失败的图片保留原链接并在报告中明确指出，由用户决定继续还是处理后重试
 5. **禁止手写一次性排版脚本**：转微信一律走本 skill 的 `md2wechat.py` 管线。手写临时 HTML 脚本会把已废弃的旧风格（如蓝色竖条标题）带回文章，2026-10-21 已因此返工一次
-6. **大图必须先压缩再上传**（2026-10-21 踩坑）：微信编辑器粘贴时会逐张从图床抓取图片，超过 ~400KB 的图（如 2.4MB PNG 截图）容易抓取超时变成挂图。上传前统一处理：宽度压到 1080px、PNG 优化后仍超 400KB 的转 JPEG(q88)。另外七牛 bucket 若开启"强制下载"（响应头带 `X-Kodo-Force-Download: true` + `Content-Disposition: attachment`），也可能导致微信抓图失败，需让用户在七牛控制台关闭
+6. **大图必须先压缩再上传**（2026-10-21 踩坑）：微信编辑器粘贴时会逐张从图床抓取图片，超过 ~400KB 的图（如 2.4MB PNG 截图）容易抓取超时变成挂图。上传前统一处理：宽度压到 1080px、PNG 优化后仍超 400KB 的转 JPEG(q88)
+7. **七牛测试域名的图片 URL 必须用 `http://`，禁止 `https://`**（2026-10-21 踩坑，挂图根因）：`*.clouddn.com` 测试域名的 HTTPS 证书不受信任（curl 不加 `-k` 直接握手失败），微信抓取器严格校验证书会导致**全部图片**挂掉。历史可用文章均为 http 链接。生成图床 URL 时 domain 一律拼 `http://`。另外七牛 bucket 若开启"强制下载"（响应头带 `X-Kodo-Force-Download: true` + `Content-Disposition: attachment`），也可能导致微信抓图失败，需让用户在七牛控制台关闭
 
 ## 常见错误
 
