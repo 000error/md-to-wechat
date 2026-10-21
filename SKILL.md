@@ -82,13 +82,25 @@ python md2wechat.py <上一步输出的md文件> --output <输出html路径>
 - 可用 `--no-verify` 跳过（仅调试时用）
 - 单独校验已有 HTML：`python verify_wechat.py <html文件>`
 
-**硬性规则：每次修改 `styles/default.json` 或 `md2wechat.py` 的格式相关代码后，必须跑一次全格式回归**：
+**硬性规则（最高优先级，2026-10-21 用户三令五申）：任何情况下，交付给用户粘贴的 HTML 必须先过官方检测器，`isValid: true / 0 违规` 才允许交付。本 skill 的任何代码或样式被修改后，也必须先跑回归验证再提交 git。**
 
-```bash
-python md2wechat.py tests/full_format_fixture.md --output /tmp/regression.html
-```
+具体执行：
 
-`tests/full_format_fixture.md` 覆盖了标题/长段落/加粗折行/列表/代码块/表格/图片/引用等全部格式，能触发历史上所有误报场景。检测通过才可交付。
+1. **每次修改本 skill 的任何文件后**（`styles/*.json`、`md2wechat.py`、`migrate_images.py`、SKILL.md 排版约定等），提交 git 前必须跑一次全格式回归：
+
+   ```bash
+   python md2wechat.py tests/full_format_fixture.md --output /tmp/regression.html
+   ```
+
+   `tests/full_format_fixture.md` 覆盖了标题/长段落/加粗折行/列表/代码块/表格/图片/引用等全部格式，能触发历史上所有误报场景。**检测不通过 → 修复 → 重跑，通过之前禁止 git commit。**
+
+2. **每次为用户生成文章 HTML 后**，无论走 `md2wechat.py`（已内置自动校验）还是任何临时方式，交付前都要确认检测器通过；单独校验已有 HTML：
+
+   ```bash
+   python verify_wechat.py <html文件>
+   ```
+
+3. **血泪教训备忘**：2026-10-21 手写临时 HTML 未过检测器直接交付，用户粘贴后被微信判 `text-align: start` 对齐异常 + line-height 叠字风险，返工三轮。检测器对内联元素折行的"叠字"误报用 `<span>` 包裹块级内容规避（md2wechat.py 的 WRAP_TAGS 已实现）；无显式 `text-align` 的段落会被判 `start/end` 异常，所有块级元素必须显式声明对齐。
 
 **检测器首次部署**（skill 克隆到新机器后）：
 
