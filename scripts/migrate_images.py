@@ -111,9 +111,58 @@ HTML_IMG_RE = re.compile(r'<img\s[^>]*?src=["\']([^"\']+)["\']', re.IGNORECASE)
 
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'}
 
+# ---------------------------------------------------------------------------
+# 上传前压缩（2026-10-21 挂图踩坑后新增，勿删）
+# 微信编辑器粘贴时会逐张从图床抓取图片，大图（如 2.4MB 截图）容易抓取超时
+# 变成挂图。规则：宽度压到 1080px；PNG 优化后仍超阈值则转 JPEG(q88)。
+# GIF/SVG 不重编码（动图/矢量图保真）。
+# ---------------------------------------------------------------------------
+MAX_WIDTH = 1080
+JPEG_THRESHOLD = 400 * 1024
+SKIP_COMPRESS_EXTS = {'.gif', '.svg'}
+
+
+def compress_for_wechat(local_path, dest_dir):
+    """Compress an image for WeChat fetching; return path to the file to upload.
+
+    Returns the original path unchanged when no processing is needed or PIL
+    is unavailable (graceful degradation with a warning).
+    """
+    path = Path(local_path)
+    if path.suffix.lower() in SKIP_COMPRESS_EXTS:
+        return path
+    try:
+        from PIL import Image
+    except ImportError:
+        print("[警告] 未安装 Pillow，跳过压缩（pip install Pillow）", file=sys.stderr)
+        return path
+
+    size = path.stat().st_size
+    im = Image.open(path)
+    need_resize = im.width > MAX_WIDTH
+    if not need_resize and size <= JPEG_THRESHOLD:
+        return path
+
+    if need_resize:
+        im = im.resize((MAX_WIDTH, int(im.height * MAX_WIDTH / im.width)),
+                       Image.LANCZOS)
+    dest = Path(dest_dir) / f"{uuid.uuid4().hex}.png"
+    im.save(dest, 'PNG', optimize=True)
+    if dest.stat().st_size <= JPEG_THRESHOLD:
+        return dest
+    if im.mode != 'RGB':
+        im = im.convert('RGB')
+    dest = dest.with_suffix('.jpg')
+    im.save(dest, 'JPEG', quality=88, optimize=True)
+    return dest
+
 
 def is_remote(url):
     return url.startswith('http://') or url.startswith('https://')
+
+
+def size_kb(p):
+    return Path(p).stat().st_size // 1024
 
 
 def download_image(url, dest_dir):
@@ -176,8 +225,12 @@ def migrate_images(md_file, config_path=None, output_file=None):
                     local_path = md_path.parent / unquote(url)
                 if not local_path.exists():
                     raise FileNotFoundError(f"本地图片不存在: {local_path}")
-            print(f"[上传] {local_path.name} -> 图床")
-            new_url = uploader.upload(local_path)
+            upload_path = compress_for_wechat(local_path, tmp_dir)
+            if upload_path != Path(local_path):
+                print(f"[压缩] {local_path.name} ({size_kb(local_path)}KB) "
+                      f"-> {upload_path.name} ({size_kb(upload_path)}KB)")
+            print(f"[上传] {upload_path.name} -> 图床")
+            new_url = uploader.upload(upload_path)
             print(f"[成功] {new_url}")
             # Replace URL inside the original markdown match to keep alt/title intact
             new_match = full_match.replace(url, new_url)

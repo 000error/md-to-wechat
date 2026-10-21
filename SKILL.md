@@ -41,6 +41,8 @@ python migrate_images.py <用户md文件路径> --output <输出md路径>
 - 图片 URL 的域名与配置图床域名一致 → 跳过
 - 外链图片 → 下载后上传图床，替换为新 URL
 - 本地图片（相对路径基于 md 文件所在目录解析）→ 直接上传图床，替换为新 URL
+- **上传前自动压缩**（防微信抓取超时挂图）：宽度 >1080px 压到 1080px，PNG 优化后仍超 400KB 转 JPEG(q88)；GIF/SVG 不动；需 Pillow（在 requirements.txt 里）
+- 生成的图床 URL 强制 `http://`（七牛 clouddn 测试域名 https 证书不受信任）
 - 输出新 Markdown 文件（默认 `<原名>_hosted.md`），原文件不改动
 
 向用户简要报告迁移结果：共几张图、几张已在图床、几张新迁移、几张失败。
